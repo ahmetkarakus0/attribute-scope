@@ -1,8 +1,4 @@
-/* Toggle Button Design - Start */
-const findDataTestIdToggleButton = document.createElement("button");
-findDataTestIdToggleButton.textContent = "Show Elements with Data Test Id";
-
-Object.assign(findDataTestIdToggleButton.style, {
+const BUTTON_STYLES = {
   alignItems: "center",
   appearance: "none",
   backgroundColor: "#FCFCFD",
@@ -10,7 +6,6 @@ Object.assign(findDataTestIdToggleButton.style, {
   borderWidth: "0",
   boxShadow:
     "rgba(45, 35, 66, 0.4) 0 2px 4px,rgba(45, 35, 66, 0.3) 0 7px 13px -3px,#D6D6E7 0 -3px 0 inset",
-  boxSizing: "border-box",
   color: "#36395A",
   cursor: "pointer",
   display: "inline-flex",
@@ -20,8 +15,7 @@ Object.assign(findDataTestIdToggleButton.style, {
   lineHeight: "1",
   listStyle: "none",
   overflow: "hidden",
-  paddingLeft: "16px",
-  paddingRight: "16px",
+  padding: "0 16px",
   position: "fixed",
   bottom: "16px",
   right: "16px",
@@ -36,143 +30,178 @@ Object.assign(findDataTestIdToggleButton.style, {
   willChange: "box-shadow,transform",
   fontSize: "18px",
   zIndex: "9999",
-});
+};
 
-findDataTestIdToggleButton.addEventListener("mouseover", () => {
-  findDataTestIdToggleButton.style.boxShadow =
-    "rgba(45, 35, 66, 0.4) 0 4px 8px, rgba(45, 35, 66, 0.3) 0 7px 13px -3px, #D6D6E7 0 -3px 0 inset";
-});
+const TOOLTIP_STYLES = {
+  position: "absolute",
+  backgroundColor: "rgba(0, 0, 0, 0.8)",
+  color: "white",
+  padding: "5px 10px",
+  borderRadius: "4px",
+  fontSize: "12px",
+  zIndex: "10000",
+};
 
-findDataTestIdToggleButton.addEventListener("mouseout", () => {
-  findDataTestIdToggleButton.style.boxShadow =
-    "rgba(45, 35, 66, 0.4) 0 2px 4px,rgba(45, 35, 66, 0.3) 0 7px 13px -3px,#D6D6E7 0 -3px 0 inset";
-});
+const HIGHLIGHT_STYLES = {
+  border: "2px solid red",
+  borderRadius: "8px",
+};
 
-findDataTestIdToggleButton.addEventListener("mousedown", () => {
-  findDataTestIdToggleButton.style.boxShadow = "#D6D6E7 0 3px 7px inset";
-  findDataTestIdToggleButton.style.transform = "translateY(2px)";
-});
+class DataTestIdHighlighter {
+  constructor() {
+    this.isActive = false;
+    this.dataTestIdElements = [];
+    this.originalStyles = new Map();
+    this.activeTooltip = null;
+    this.activeElement = null;
+    this.observer = null;
+    this.button = this.createToggleButton();
 
-findDataTestIdToggleButton.addEventListener("mouseup", () => {
-  findDataTestIdToggleButton.style.boxShadow =
-    "rgba(45, 35, 66, 0.4) 0 2px 4px,rgba(45, 35, 66, 0.3) 0 7px 13px -3px,#D6D6E7 0 -3px 0 inset";
-  findDataTestIdToggleButton.style.transform = "none";
-});
-
-/* Toggle Button Design - End */
-
-/* Toggle Button Logic - Start */
-let isActive = false;
-let dataTestIdElements = [];
-let originalStyles = new Map();
-let activeTooltip = null;
-let activeElement = null;
-let observer = null; // MutationObserver için değişken
-
-findDataTestIdToggleButton.addEventListener("click", () => {
-  if (isActive) {
-    isActive = false;
-    dataTestIdElements.forEach((element) => {
-      const originalStyle = originalStyles.get(element);
-      if (originalStyle) {
-        // Orijinal stiller varsa geri yükle
-        if (originalStyle.border !== undefined)
-          element.style.border = originalStyle.border;
-        if (originalStyle.borderRadius !== undefined)
-          element.style.borderRadius = originalStyle.borderRadius;
-        if (originalStyle.padding !== undefined)
-          element.style.padding = originalStyle.padding;
-        if (originalStyle.margin !== undefined)
-          element.style.margin = originalStyle.margin;
-      } else {
-        // Orijinal stiller yoksa varsayılan değerlere döndür
-        element.style.border = "";
-        element.style.borderRadius = "";
-        element.style.padding = "";
-        element.style.margin = "";
-      }
-
-      // Remove mouseover and mouseout event listeners
-      element.onmouseover = null;
-      element.onmouseout = null;
+    // Set initial visibility based on stored preference
+    chrome.storage.sync.get(["buttonVisible"], (result) => {
+      this.button.style.display =
+        result.buttonVisible !== false ? "inline-flex" : "none";
     });
-    document.removeEventListener("keyup", handleKeyPress);
-    if (observer) {
-      observer.disconnect(); // Observer'ı durdur
-      observer = null;
-    }
-    findDataTestIdToggleButton.textContent = "Show Elements with Data Test Id";
-  } else {
-    isActive = true;
-    document.addEventListener("keyup", handleKeyPress);
 
-    // MutationObserver oluştur
-    observer = new MutationObserver((mutations) => {
+    // Listen for messages from popup
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.action === "toggleButtonVisibility") {
+        this.button.style.display = message.visible ? "inline-flex" : "none";
+      }
+    });
+
+    this.init();
+  }
+
+  createToggleButton() {
+    const button = document.createElement("button");
+    button.textContent = "Show Elements with Data Test Id";
+    Object.assign(button.style, BUTTON_STYLES);
+    this.setupButtonEvents(button);
+    return button;
+  }
+
+  setupButtonEvents(button) {
+    button.addEventListener("mouseover", () => {
+      button.style.boxShadow =
+        "rgba(45, 35, 66, 0.4) 0 4px 8px, rgba(45, 35, 66, 0.3) 0 7px 13px -3px, #D6D6E7 0 -3px 0 inset";
+    });
+
+    button.addEventListener("mouseout", () => {
+      button.style.boxShadow = BUTTON_STYLES.boxShadow;
+    });
+
+    button.addEventListener("mousedown", () => {
+      button.style.boxShadow = "#D6D6E7 0 3px 7px inset";
+      button.style.transform = "translateY(2px)";
+    });
+
+    button.addEventListener("mouseup", () => {
+      button.style.boxShadow = BUTTON_STYLES.boxShadow;
+      button.style.transform = "none";
+    });
+
+    button.addEventListener("click", () => this.toggleHighlight());
+  }
+
+  createTooltip(element, event) {
+    const tooltip = document.createElement("div");
+    tooltip.className = "data-test-id-tooltip";
+    tooltip.textContent = element.getAttribute("data-test-id");
+
+    Object.assign(tooltip.style, {
+      ...TOOLTIP_STYLES,
+      top: `${event.pageY + 10}px`,
+      left: `${event.pageX + 10}px`,
+    });
+
+    return tooltip;
+  }
+
+  handleElementMouseOver(element, event) {
+    event.stopPropagation();
+    this.activeElement = element;
+
+    if (this.activeTooltip) {
+      this.activeTooltip.remove();
+    }
+
+    const tooltip = this.createTooltip(element, event);
+    document.body.appendChild(tooltip);
+    element._tooltip = tooltip;
+    this.activeTooltip = tooltip;
+  }
+
+  handleElementMouseOut(element, event) {
+    event.stopPropagation();
+    this.activeElement = null;
+    if (element._tooltip) {
+      element._tooltip.remove();
+      element._tooltip = null;
+      this.activeTooltip = null;
+    }
+  }
+
+  setupElementHighlight(element) {
+    this.originalStyles.set(element, {
+      border: element.style.border || "",
+      borderRadius: element.style.borderRadius || "",
+    });
+
+    Object.assign(element.style, HIGHLIGHT_STYLES);
+
+    element.onmouseover = (e) => this.handleElementMouseOver(element, e);
+    element.onmouseout = (e) => this.handleElementMouseOut(element, e);
+  }
+
+  resetElementStyles(element) {
+    const originalStyle = this.originalStyles.get(element);
+    if (originalStyle) {
+      Object.entries(originalStyle).forEach(([prop, value]) => {
+        if (value !== undefined) element.style[prop] = value;
+      });
+    } else {
+      Object.keys(HIGHLIGHT_STYLES).forEach((prop) => {
+        element.style[prop] = "";
+      });
+    }
+    element.onmouseover = null;
+    element.onmouseout = null;
+  }
+
+  handleKeyPress = (e) => {
+    if (
+      e.key.toLowerCase() === "c" &&
+      this.activeElement &&
+      this.activeTooltip
+    ) {
+      e.stopPropagation();
+      const dataTestId = this.activeElement.getAttribute("data-test-id");
+      navigator.clipboard.writeText(dataTestId).then(() => {
+        const originalText = this.activeTooltip.textContent;
+        this.activeTooltip.textContent = "Copied!";
+        setTimeout(() => {
+          if (this.activeTooltip) {
+            this.activeTooltip.textContent = originalText;
+          }
+        }, 1000);
+      });
+    }
+  };
+
+  setupObserver() {
+    this.observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === 1) {
-            // Element node kontrolü
-            // Yeni eklenen element içindeki tüm data-test-id'li elementleri bul
-            const newElements = node.querySelectorAll("[data-test-id]");
+            const newElements = [...node.querySelectorAll("[data-test-id]")];
             if (node.hasAttribute("data-test-id")) {
-              newElements.add(node);
+              newElements.push(node);
             }
-
             newElements.forEach((element) => {
-              if (!dataTestIdElements.includes(element)) {
-                dataTestIdElements.push(element);
-                // Yeni element için stilleri uygula
-                originalStyles.set(element, {
-                  border: element.style.border || "",
-                  borderRadius: element.style.borderRadius || "",
-                  padding: element.style.padding || "",
-                  margin: element.style.margin || "",
-                });
-
-                Object.assign(element.style, {
-                  border: "1px solid red",
-                  borderRadius: "8px",
-                });
-
-                element.onmouseover = (e) => {
-                  e.stopPropagation();
-                  activeElement = element;
-
-                  // Varsa önceki tooltip'i kaldır
-                  if (activeTooltip) {
-                    activeTooltip.remove();
-                  }
-
-                  const tooltip = document.createElement("div");
-                  tooltip.className = "data-test-id-tooltip";
-                  tooltip.textContent = element.getAttribute("data-test-id");
-
-                  Object.assign(tooltip.style, {
-                    position: "absolute",
-                    backgroundColor: "rgba(0, 0, 0, 0.8)",
-                    color: "white",
-                    padding: "5px 10px",
-                    borderRadius: "4px",
-                    fontSize: "12px",
-                    zIndex: "10000",
-                    top: `${e.pageY + 10}px`,
-                    left: `${e.pageX + 10}px`,
-                  });
-
-                  document.body.appendChild(tooltip);
-                  element._tooltip = tooltip;
-                  activeTooltip = tooltip;
-                };
-
-                element.onmouseout = (e) => {
-                  e.stopPropagation();
-                  activeElement = null;
-                  if (element._tooltip) {
-                    element._tooltip.remove();
-                    element._tooltip = null;
-                    activeTooltip = null;
-                  }
-                };
+              if (!this.dataTestIdElements.includes(element)) {
+                this.dataTestIdElements.push(element);
+                this.setupElementHighlight(element);
               }
             });
           }
@@ -180,91 +209,42 @@ findDataTestIdToggleButton.addEventListener("click", () => {
       });
     });
 
-    // Observer'ı başlat
-    observer.observe(document.body, {
+    this.observer.observe(document.body, {
       childList: true,
       subtree: true,
     });
-
-    // Mevcut elementleri işle
-    dataTestIdElements = Array.from(
-      document.querySelectorAll("[data-test-id]")
-    );
-    dataTestIdElements.forEach((element) => {
-      // Mevcut stilleri kaydet
-      originalStyles.set(element, {
-        border: element.style.border || "",
-        borderRadius: element.style.borderRadius || "",
-        padding: element.style.padding || "",
-        margin: element.style.margin || "",
-      });
-
-      Object.assign(element.style, {
-        border: "1px solid red",
-        borderRadius: "8px",
-      });
-
-      element.onmouseover = (e) => {
-        e.stopPropagation();
-        activeElement = element;
-
-        // Varsa önceki tooltip'i kaldır
-        if (activeTooltip) {
-          activeTooltip.remove();
-        }
-
-        const tooltip = document.createElement("div");
-        tooltip.className = "data-test-id-tooltip";
-        tooltip.textContent = element.getAttribute("data-test-id");
-
-        Object.assign(tooltip.style, {
-          position: "absolute",
-          backgroundColor: "rgba(0, 0, 0, 0.8)",
-          color: "white",
-          padding: "5px 10px",
-          borderRadius: "4px",
-          fontSize: "12px",
-          zIndex: "10000",
-          top: `${e.pageY + 10}px`,
-          left: `${e.pageX + 10}px`,
-        });
-
-        document.body.appendChild(tooltip);
-        element._tooltip = tooltip;
-        activeTooltip = tooltip;
-      };
-
-      element.onmouseout = (e) => {
-        e.stopPropagation();
-        activeElement = null;
-        if (element._tooltip) {
-          element._tooltip.remove();
-          element._tooltip = null;
-          activeTooltip = null;
-        }
-      };
-    });
-
-    findDataTestIdToggleButton.textContent = "Hide";
   }
-});
 
-function handleKeyPress(e) {
-  if (e.key.toLowerCase() === "c" && activeElement && activeTooltip) {
-    e.stopPropagation();
-    const dataTestId = activeElement.getAttribute("data-test-id");
-    navigator.clipboard.writeText(dataTestId).then(() => {
-      const originalText = activeTooltip.textContent;
-      activeTooltip.textContent = "Copied!";
+  toggleHighlight() {
+    this.isActive = !this.isActive;
 
-      setTimeout(() => {
-        if (activeTooltip) {
-          activeTooltip.textContent = originalText;
-        }
-      }, 1000);
-    });
+    if (this.isActive) {
+      document.addEventListener("keyup", this.handleKeyPress);
+      this.setupObserver();
+      this.dataTestIdElements = Array.from(
+        document.querySelectorAll("[data-test-id]")
+      );
+      this.dataTestIdElements.forEach((element) =>
+        this.setupElementHighlight(element)
+      );
+      this.button.textContent = "Hide";
+    } else {
+      this.dataTestIdElements.forEach((element) =>
+        this.resetElementStyles(element)
+      );
+      document.removeEventListener("keyup", this.handleKeyPress);
+      if (this.observer) {
+        this.observer.disconnect();
+        this.observer = null;
+      }
+      this.button.textContent = "Show Elements with Data Test Id";
+    }
+  }
+
+  init() {
+    document.body.appendChild(this.button);
   }
 }
-/* Toggle Button Logic - End */
 
-document.body.appendChild(findDataTestIdToggleButton);
+// Initialize the highlighter
+new DataTestIdHighlighter();

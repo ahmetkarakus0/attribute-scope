@@ -3,11 +3,14 @@
   "name": "Data Test Id Finder",
   "version": "1.0",
   "description": "A description of my Chrome extension",
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["storage", "activeTab"],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"]
     }
-  ]
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
 }
