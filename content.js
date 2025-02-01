@@ -66,6 +66,7 @@ let isActive = false;
 let dataTestIdElements = [];
 let originalStyles = new Map();
 let activeTooltip = null;
+let activeElement = null;
 
 findDataTestIdToggleButton.addEventListener("click", () => {
   dataTestIdElements = document.querySelectorAll("[data-test-id]");
@@ -73,21 +74,39 @@ findDataTestIdToggleButton.addEventListener("click", () => {
     isActive = false;
     dataTestIdElements.forEach((element) => {
       const originalStyle = originalStyles.get(element);
-      element.style.border = originalStyle.border;
-      element.style.borderRadius = originalStyle.borderRadius;
-      element.style.padding = originalStyle.padding;
-      element.style.margin = originalStyle.margin;
+      if (originalStyle) {
+        // Orijinal stiller varsa geri yükle
+        if (originalStyle.border !== undefined)
+          element.style.border = originalStyle.border;
+        if (originalStyle.borderRadius !== undefined)
+          element.style.borderRadius = originalStyle.borderRadius;
+        if (originalStyle.padding !== undefined)
+          element.style.padding = originalStyle.padding;
+        if (originalStyle.margin !== undefined)
+          element.style.margin = originalStyle.margin;
+      } else {
+        // Orijinal stiller yoksa varsayılan değerlere döndür
+        element.style.border = "";
+        element.style.borderRadius = "";
+        element.style.padding = "";
+        element.style.margin = "";
+      }
 
       // Remove mouseover and mouseout event listeners
       element.onmouseover = null;
       element.onmouseout = null;
     });
+    document.removeEventListener("keydown", handleKeyPress);
   } else {
     isActive = true;
+    document.addEventListener("keydown", handleKeyPress);
     dataTestIdElements.forEach((element) => {
+      // Mevcut stilleri kaydet
       originalStyles.set(element, {
-        border: element.style.border,
-        borderRadius: element.style.borderRadius,
+        border: element.style.border || "",
+        borderRadius: element.style.borderRadius || "",
+        padding: element.style.padding || "",
+        margin: element.style.margin || "",
       });
 
       Object.assign(element.style, {
@@ -95,9 +114,9 @@ findDataTestIdToggleButton.addEventListener("click", () => {
         borderRadius: "8px",
       });
 
-      // Güncellenmiş tooltip fonksiyonalitesi
       element.onmouseover = (e) => {
         e.stopPropagation();
+        activeElement = element;
 
         // Varsa önceki tooltip'i kaldır
         if (activeTooltip) {
@@ -127,6 +146,7 @@ findDataTestIdToggleButton.addEventListener("click", () => {
 
       element.onmouseout = (e) => {
         e.stopPropagation();
+        activeElement = null;
         if (element._tooltip) {
           element._tooltip.remove();
           element._tooltip = null;
@@ -136,6 +156,22 @@ findDataTestIdToggleButton.addEventListener("click", () => {
     });
   }
 });
+
+function handleKeyPress(e) {
+  if (e.key.toLowerCase() === "c" && activeElement && activeTooltip) {
+    const dataTestId = activeElement.getAttribute("data-test-id");
+    navigator.clipboard.writeText(dataTestId).then(() => {
+      const originalText = activeTooltip.textContent;
+      activeTooltip.textContent = "Copied!";
+
+      setTimeout(() => {
+        if (activeTooltip) {
+          activeTooltip.textContent = originalText;
+        }
+      }, 1000);
+    });
+  }
+}
 /* Toggle Button Logic - End */
 
 document.body.appendChild(findDataTestIdToggleButton);
