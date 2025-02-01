@@ -1,6 +1,6 @@
 /* Toggle Button Design - Start */
 const findDataTestIdToggleButton = document.createElement("button");
-findDataTestIdToggleButton.textContent = "Find Elements";
+findDataTestIdToggleButton.textContent = "Show Elements with Data Test Id";
 
 Object.assign(findDataTestIdToggleButton.style, {
   alignItems: "center",
@@ -67,9 +67,9 @@ let dataTestIdElements = [];
 let originalStyles = new Map();
 let activeTooltip = null;
 let activeElement = null;
+let observer = null; // MutationObserver için değişken
 
 findDataTestIdToggleButton.addEventListener("click", () => {
-  dataTestIdElements = document.querySelectorAll("[data-test-id]");
   if (isActive) {
     isActive = false;
     dataTestIdElements.forEach((element) => {
@@ -96,10 +96,100 @@ findDataTestIdToggleButton.addEventListener("click", () => {
       element.onmouseover = null;
       element.onmouseout = null;
     });
-    document.removeEventListener("keydown", handleKeyPress);
+    document.removeEventListener("keyup", handleKeyPress);
+    if (observer) {
+      observer.disconnect(); // Observer'ı durdur
+      observer = null;
+    }
+    findDataTestIdToggleButton.textContent = "Show Elements with Data Test Id";
   } else {
     isActive = true;
-    document.addEventListener("keydown", handleKeyPress);
+    document.addEventListener("keyup", handleKeyPress);
+
+    // MutationObserver oluştur
+    observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) {
+            // Element node kontrolü
+            // Yeni eklenen element içindeki tüm data-test-id'li elementleri bul
+            const newElements = node.querySelectorAll("[data-test-id]");
+            if (node.hasAttribute("data-test-id")) {
+              newElements.add(node);
+            }
+
+            newElements.forEach((element) => {
+              if (!dataTestIdElements.includes(element)) {
+                dataTestIdElements.push(element);
+                // Yeni element için stilleri uygula
+                originalStyles.set(element, {
+                  border: element.style.border || "",
+                  borderRadius: element.style.borderRadius || "",
+                  padding: element.style.padding || "",
+                  margin: element.style.margin || "",
+                });
+
+                Object.assign(element.style, {
+                  border: "1px solid red",
+                  borderRadius: "8px",
+                });
+
+                element.onmouseover = (e) => {
+                  e.stopPropagation();
+                  activeElement = element;
+
+                  // Varsa önceki tooltip'i kaldır
+                  if (activeTooltip) {
+                    activeTooltip.remove();
+                  }
+
+                  const tooltip = document.createElement("div");
+                  tooltip.className = "data-test-id-tooltip";
+                  tooltip.textContent = element.getAttribute("data-test-id");
+
+                  Object.assign(tooltip.style, {
+                    position: "absolute",
+                    backgroundColor: "rgba(0, 0, 0, 0.8)",
+                    color: "white",
+                    padding: "5px 10px",
+                    borderRadius: "4px",
+                    fontSize: "12px",
+                    zIndex: "10000",
+                    top: `${e.pageY + 10}px`,
+                    left: `${e.pageX + 10}px`,
+                  });
+
+                  document.body.appendChild(tooltip);
+                  element._tooltip = tooltip;
+                  activeTooltip = tooltip;
+                };
+
+                element.onmouseout = (e) => {
+                  e.stopPropagation();
+                  activeElement = null;
+                  if (element._tooltip) {
+                    element._tooltip.remove();
+                    element._tooltip = null;
+                    activeTooltip = null;
+                  }
+                };
+              }
+            });
+          }
+        });
+      });
+    });
+
+    // Observer'ı başlat
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    // Mevcut elementleri işle
+    dataTestIdElements = Array.from(
+      document.querySelectorAll("[data-test-id]")
+    );
     dataTestIdElements.forEach((element) => {
       // Mevcut stilleri kaydet
       originalStyles.set(element, {
@@ -154,11 +244,14 @@ findDataTestIdToggleButton.addEventListener("click", () => {
         }
       };
     });
+
+    findDataTestIdToggleButton.textContent = "Hide";
   }
 });
 
 function handleKeyPress(e) {
   if (e.key.toLowerCase() === "c" && activeElement && activeTooltip) {
+    e.stopPropagation();
     const dataTestId = activeElement.getAttribute("data-test-id");
     navigator.clipboard.writeText(dataTestId).then(() => {
       const originalText = activeTooltip.textContent;
