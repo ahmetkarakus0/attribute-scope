@@ -73,6 +73,10 @@ class DataTestIdHighlighter {
     this.init();
   }
 
+  /**
+   * Creates a toggle button for the highlighter.
+   * @returns {HTMLButtonElement} The toggle button.
+   */
   createToggleButton() {
     const button = document.createElement("button");
     button.textContent = "Show Elements with Data Test Id";
@@ -81,6 +85,10 @@ class DataTestIdHighlighter {
     return button;
   }
 
+  /**
+   * Sets up event listeners for the toggle button.
+   * @param {HTMLButtonElement} button - The toggle button.
+   */
   setupButtonEvents(button) {
     button.addEventListener("mouseover", () => {
       button.style.boxShadow =
@@ -104,6 +112,12 @@ class DataTestIdHighlighter {
     button.addEventListener("click", () => this.toggleHighlight());
   }
 
+  /**
+   * Creates a tooltip for an element.
+   * @param {HTMLElement} element - The element to create a tooltip for.
+   * @param {MouseEvent} event - The mouse event.
+   * @returns {HTMLDivElement} The tooltip.
+   */
   createTooltip(element, event) {
     const tooltip = document.createElement("div");
     tooltip.className = "data-test-id-tooltip";
@@ -118,6 +132,11 @@ class DataTestIdHighlighter {
     return tooltip;
   }
 
+  /**
+   * Handles the mouse over event for an element.
+   * @param {HTMLElement} element - The element that was hovered over.
+   * @param {MouseEvent} event - The mouse event.
+   */
   handleElementMouseOver(element, event) {
     event.stopPropagation();
     this.activeElement = element;
@@ -132,6 +151,11 @@ class DataTestIdHighlighter {
     this.activeTooltip = tooltip;
   }
 
+  /**
+   * Handles the mouse out event for an element.
+   * @param {HTMLElement} element - The element that was hovered out of.
+   * @param {MouseEvent} event - The mouse event.
+   */
   handleElementMouseOut(element, event) {
     event.stopPropagation();
     this.activeElement = null;
@@ -142,6 +166,10 @@ class DataTestIdHighlighter {
     }
   }
 
+  /**
+   * Sets up the highlight for an element.
+   * @param {HTMLElement} element - The element to highlight.
+   */
   setupElementHighlight(element) {
     this.originalStyles.set(element, {
       border: element.style.border || "",
@@ -154,6 +182,10 @@ class DataTestIdHighlighter {
     element.onmouseout = (e) => this.handleElementMouseOut(element, e);
   }
 
+  /**
+   * Resets the styles of an element.
+   * @param {HTMLElement} element - The element to reset.
+   */
   resetElementStyles(element) {
     const originalStyle = this.originalStyles.get(element);
     if (originalStyle) {
@@ -169,6 +201,10 @@ class DataTestIdHighlighter {
     element.onmouseout = null;
   }
 
+  /**
+   * Handles the key press event for the highlighter.
+   * @param {KeyboardEvent} e - The keyboard event.
+   */
   handleKeyPress = (e) => {
     if (
       e.key.toLowerCase() === "c" &&
@@ -189,6 +225,9 @@ class DataTestIdHighlighter {
     }
   };
 
+  /**
+   * Sets up the observer for the highlighter.
+   */
   setupObserver() {
     this.observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -215,6 +254,9 @@ class DataTestIdHighlighter {
     });
   }
 
+  /**
+   * Toggles the highlight on and off.
+   */
   toggleHighlight() {
     this.isActive = !this.isActive;
 
@@ -241,6 +283,9 @@ class DataTestIdHighlighter {
     }
   }
 
+  /**
+   * Initializes the highlighter.
+   */
   init() {
     document.body.appendChild(this.button);
   }
