@@ -7,7 +7,7 @@
         padding: 16px;
       }
 
-      .container {
+      .wrapper {
         display: flex;
         flex-direction: column;
         gap: 16px;
@@ -58,7 +58,7 @@
         transform: translateX(14px);
       }
 
-      .switch-container {
+      .container {
         display: flex;
         align-items: center;
         gap: 8px;
@@ -66,20 +66,25 @@
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="switch-container">
+    <div class="wrapper">
+      <div class="container">
         <label class="switch">
           <input type="checkbox" id="buttonVisibility" />
           <span class="slider"></span>
         </label>
         <label for="buttonVisibility">Enable Data Test ID Highlighter</label>
       </div>
-      <div class="switch-container">
+      <div class="container">
         <label class="switch">
           <input type="checkbox" id="javaSmartCopy" />
           <span class="slider"></span>
         </label>
         <label for="javaSmartCopy">Enable Java Smart Copy</label>
+      </div>
+      <div class="container">
+        <label>Attribute Name</label>
+        <input type="text" id="attributeName" />
+        <button id="setAttributeName">Set</button>
       </div>
     </div>
     <script src="popup.js"></script>

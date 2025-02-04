@@ -47,36 +47,69 @@ const HIGHLIGHT_STYLES = {
   borderRadius: "8px",
 };
 
-class DataTestIdHighlighter {
+class AttributeHighlighter {
   constructor() {
     this.isActive = false;
-    this.dataTestIdElements = [];
+    this.attributeElements = [];
     this.originalStyles = new Map();
     this.activeTooltip = null;
     this.activeElement = null;
     this.observer = null;
     this.button = this.createToggleButton();
     this.javaSmartCopy = false;
+    this.attributeName = "data-test-id";
 
     // Set initial visibility based on stored preference
-    chrome.storage.sync.get(["buttonVisible", "javaSmartCopy"], (result) => {
-      this.button.style.display =
-        result.buttonVisible !== false ? "inline-flex" : "none";
-      this.javaSmartCopy = result.javaSmartCopy !== false;
-    });
+    chrome.storage.sync.get(
+      ["buttonVisible", "javaSmartCopy", "attributeName"],
+      (result) => {
+        this.button.style.display =
+          result.buttonVisible !== false ? "inline-flex" : "none";
+        this.javaSmartCopy = result.javaSmartCopy !== false;
+        this.attributeName = result.attributeName || "data-test-id";
+        this.button.textContent = `Show Elements with ${this.attributeName}`;
+      }
+    );
 
     // Listen for messages from popup
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === "toggleButtonVisibility") {
+        if (!message.visible) {
+          this.resetHighlights();
+          this.button.textContent = `Show Elements with ${this.attributeName}`;
+          this.isActive = false;
+        }
+
         this.button.style.display = message.visible ? "inline-flex" : "none";
       }
 
       if (message.action === "toggleJavaSmartCopy") {
         this.javaSmartCopy = message.enabled;
       }
+
+      if (message.action === "updateAttributeName") {
+        this.attributeName = message.attributeName;
+        this.button.textContent = `Show Elements with ${this.attributeName}`;
+        this.resetHighlights();
+        if (this.isActive) {
+          this.toggleHighlight();
+          this.toggleHighlight();
+        }
+      }
     });
 
     this.init();
+  }
+
+  /**
+   * Resets all highlights and clears the attributeElements array.
+   */
+  resetHighlights() {
+    this.attributeElements.forEach((element) =>
+      this.resetElementStyles(element)
+    );
+    this.attributeElements = [];
+    this.originalStyles.clear();
   }
 
   /**
@@ -85,7 +118,7 @@ class DataTestIdHighlighter {
    */
   createToggleButton() {
     const button = document.createElement("button");
-    button.textContent = "Show Elements with Data Test Id";
+    button.textContent = `Show Elements with ${this.attributeName}`;
     Object.assign(button.style, BUTTON_STYLES);
     this.setupButtonEvents(button);
     return button;
@@ -126,8 +159,8 @@ class DataTestIdHighlighter {
    */
   createTooltip(element, event) {
     const tooltip = document.createElement("div");
-    tooltip.className = "data-test-id-tooltip";
-    tooltip.textContent = element.getAttribute("data-test-id");
+    tooltip.className = "attribute-tooltip";
+    tooltip.textContent = element.getAttribute(this.attributeName);
 
     Object.assign(tooltip.style, {
       ...TOOLTIP_STYLES,
@@ -208,22 +241,21 @@ class DataTestIdHighlighter {
   }
 
   /**
-   * Format data test id for java smart copy
-   * @param {string} dataTestId - The data test id to format.
-   * @returns {string} The formatted data test id.
+   * Format searched attribute value for java smart copy
+   * @param {string} attributeValue - The searched attribute value to format.
+   * @returns {string} The formatted searched attribute value.
    */
-  formatDataTestIdForJavaSmartCopy(dataTestId) {
-    if (!dataTestId) return "";
+  formatAttributeValueForJavaSmartCopy(attributeValue) {
+    if (!attributeValue) return "";
 
-    // Kebab-case olan test ID'yi camelCase'e çeviriyoruz
-    const camelCaseId = dataTestId
+    const camelCaseId = attributeValue
       .split("-")
       .map((word, index) =>
         index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)
       )
       .join("");
 
-    return `private final By ${camelCaseId} = createXPath("${dataTestId}");`;
+    return `private final By ${camelCaseId} = createXPath("${attributeValue}");`;
   }
 
   /**
@@ -240,15 +272,18 @@ class DataTestIdHighlighter {
       e.preventDefault();
       e.stopPropagation();
 
-      const dataTestId = this.activeElement.getAttribute("data-test-id");
+      const attributeValue = this.activeElement.getAttribute(
+        this.attributeName
+      );
 
-      let formattedDataTestId = dataTestId;
+      let formattedAttributeValue = attributeValue;
 
       if (this.javaSmartCopy) {
-        formattedDataTestId = this.formatDataTestIdForJavaSmartCopy(dataTestId);
+        formattedAttributeValue =
+          this.formatAttributeValueForJavaSmartCopy(attributeValue);
       }
 
-      navigator.clipboard.writeText(formattedDataTestId).then(() => {
+      navigator.clipboard.writeText(formattedAttributeValue).then(() => {
         const originalText = this.activeTooltip.textContent;
         this.activeTooltip.textContent = "Copied!";
         setTimeout(() => {
@@ -268,13 +303,15 @@ class DataTestIdHighlighter {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === 1) {
-            const newElements = [...node.querySelectorAll("[data-test-id]")];
-            if (node.hasAttribute("data-test-id")) {
+            const newElements = [
+              ...node.querySelectorAll(`[${this.attributeName}]`),
+            ];
+            if (node.hasAttribute(this.attributeName)) {
               newElements.push(node);
             }
             newElements.forEach((element) => {
-              if (!this.dataTestIdElements.includes(element)) {
-                this.dataTestIdElements.push(element);
+              if (!this.attributeElements.includes(element)) {
+                this.attributeElements.push(element);
                 this.setupElementHighlight(element);
               }
             });
@@ -298,15 +335,15 @@ class DataTestIdHighlighter {
     if (this.isActive) {
       document.addEventListener("keydown", this.handleKeyDown);
       this.setupObserver();
-      this.dataTestIdElements = Array.from(
-        document.querySelectorAll("[data-test-id]")
+      this.attributeElements = Array.from(
+        document.querySelectorAll(`[${this.attributeName}]`)
       );
-      this.dataTestIdElements.forEach((element) =>
+      this.attributeElements.forEach((element) =>
         this.setupElementHighlight(element)
       );
-      this.button.textContent = "Hide";
+      this.button.textContent = `Hide Elements with ${this.attributeName}`;
     } else {
-      this.dataTestIdElements.forEach((element) =>
+      this.attributeElements.forEach((element) =>
         this.resetElementStyles(element)
       );
       document.removeEventListener("keydown", this.handleKeyDown);
@@ -314,7 +351,7 @@ class DataTestIdHighlighter {
         this.observer.disconnect();
         this.observer = null;
       }
-      this.button.textContent = "Show Elements with Data Test Id";
+      this.button.textContent = `Show Elements with ${this.attributeName}`;
     }
   }
 
@@ -327,4 +364,4 @@ class DataTestIdHighlighter {
 }
 
 // Initialize the highlighter
-new DataTestIdHighlighter();
+new AttributeHighlighter();
