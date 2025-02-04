@@ -1,24 +1,27 @@
-# Data Test ID Highlighter Chrome Extension
+# Attribute Highlighter Chrome Extension
 
-A Chrome extension that helps developers visualize and interact with elements containing data-test-id attributes on web pages.
+A Chrome extension that helps developers visualize and interact with elements containing any attribute on web pages.
 
 ## Features
 
-- 🔍 Highlights all elements with `data-test-id` attributes on the page
-- 📋 One-key copying of data-test-id values (press 'CMD+C' or 'CTRL+C' while hovering)
+- 🔍 Highlights all elements with any attribute on the page
+- 📋 One-key copying of attribute values (press 'CMD+C' or 'CTRL+C' while hovering)
 - 🔄 Automatic detection of dynamically added elements
 - 👁️ Toggle button visibility option
 - 📋 Java Smart Copy option
 - 💫 Smooth visual transitions and hover effects
+- 🔍 Highlight elements by attribute name
 
 ## How to Use
 
-1. Click the "Show Elements with Data Test Id" button in the bottom-right corner of your page
-2. Elements with data-test-id will be highlighted with a red border
-3. Hover over any highlighted element to see its data-test-id value
-4. Press 'CMD+C' or 'CTRL+C' while hovering to copy the data-test-id to your clipboard
-5. Click the button again to disable highlighting
-6. Click the "Enable Java Smart Copy" button to format the data-test-id for java smart copy
+1. Click the "Show Elements with Attribute" button in the bottom-right corner of your page
+2. Enter the attribute name you want to highlight
+3. Click the "Set" button
+4. Click the "Enable Java Smart Copy" button to format the attribute for java smart copy (this format is for selenium java)
+5. Elements with attribute will be highlighted with a red border
+6. Hover over any highlighted element to see its attribute value
+7. Press 'CMD+C' or 'CTRL+C' while hovering to copy the attribute to your clipboard
+8. Click the button again to disable highlighting
 
 ## Technical Details
 
@@ -28,7 +31,9 @@ The highlighter includes:
 - Non-intrusive styling that preserves original element styles
 - Efficient event handling and memory management
 - Chrome storage sync for persistent button visibility preferences
-- Tooltip system for easy data-test-id visualization
+- Tooltip system for easy attribute visualization
+- Java Smart Copy option for java selenium
+- Attribute name can be set to any attribute name
 
 ## Styling
 
