@@ -56,17 +56,23 @@ class DataTestIdHighlighter {
     this.activeElement = null;
     this.observer = null;
     this.button = this.createToggleButton();
+    this.javaSmartCopy = false;
 
     // Set initial visibility based on stored preference
-    chrome.storage.sync.get(["buttonVisible"], (result) => {
+    chrome.storage.sync.get(["buttonVisible", "javaSmartCopy"], (result) => {
       this.button.style.display =
         result.buttonVisible !== false ? "inline-flex" : "none";
+      this.javaSmartCopy = result.javaSmartCopy !== false;
     });
 
     // Listen for messages from popup
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === "toggleButtonVisibility") {
         this.button.style.display = message.visible ? "inline-flex" : "none";
+      }
+
+      if (message.action === "toggleJavaSmartCopy") {
+        this.javaSmartCopy = message.enabled;
       }
     });
 
@@ -202,18 +208,47 @@ class DataTestIdHighlighter {
   }
 
   /**
+   * Format data test id for java smart copy
+   * @param {string} dataTestId - The data test id to format.
+   * @returns {string} The formatted data test id.
+   */
+  formatDataTestIdForJavaSmartCopy(dataTestId) {
+    if (!dataTestId) return "";
+
+    // Kebab-case olan test ID'yi camelCase'e çeviriyoruz
+    const camelCaseId = dataTestId
+      .split("-")
+      .map((word, index) =>
+        index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)
+      )
+      .join("");
+
+    return `private final By ${camelCaseId} = createXPath("${dataTestId}");`;
+  }
+
+  /**
    * Handles the key press event for the highlighter.
    * @param {KeyboardEvent} e - The keyboard event.
    */
-  handleKeyPress = (e) => {
+  handleKeyDown = (e) => {
     if (
+      (e.metaKey || e.ctrlKey || e.shiftKey) &&
       e.key.toLowerCase() === "c" &&
       this.activeElement &&
       this.activeTooltip
     ) {
+      e.preventDefault();
       e.stopPropagation();
+
       const dataTestId = this.activeElement.getAttribute("data-test-id");
-      navigator.clipboard.writeText(dataTestId).then(() => {
+
+      let formattedDataTestId = dataTestId;
+
+      if (this.javaSmartCopy) {
+        formattedDataTestId = this.formatDataTestIdForJavaSmartCopy(dataTestId);
+      }
+
+      navigator.clipboard.writeText(formattedDataTestId).then(() => {
         const originalText = this.activeTooltip.textContent;
         this.activeTooltip.textContent = "Copied!";
         setTimeout(() => {
@@ -261,7 +296,7 @@ class DataTestIdHighlighter {
     this.isActive = !this.isActive;
 
     if (this.isActive) {
-      document.addEventListener("keyup", this.handleKeyPress);
+      document.addEventListener("keydown", this.handleKeyDown);
       this.setupObserver();
       this.dataTestIdElements = Array.from(
         document.querySelectorAll("[data-test-id]")
@@ -274,7 +309,7 @@ class DataTestIdHighlighter {
       this.dataTestIdElements.forEach((element) =>
         this.resetElementStyles(element)
       );
-      document.removeEventListener("keyup", this.handleKeyPress);
+      document.removeEventListener("keydown", this.handleKeyDown);
       if (this.observer) {
         this.observer.disconnect();
         this.observer = null;

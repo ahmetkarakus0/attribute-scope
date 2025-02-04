@@ -4,14 +4,13 @@
     <style>
       body {
         min-width: 300px;
-        min-height: 200px;
-        padding: 15px;
+        padding: 16px;
       }
 
       .container {
         display: flex;
-        align-items: center;
-        gap: 10px;
+        flex-direction: column;
+        gap: 16px;
       }
 
       .switch {
@@ -58,15 +57,30 @@
       input:checked + .slider:before {
         transform: translateX(14px);
       }
+
+      .switch-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
     </style>
   </head>
   <body>
     <div class="container">
-      <label class="switch">
-        <input type="checkbox" id="buttonVisibility" />
-        <span class="slider"></span>
-      </label>
-      <label for="buttonVisibility">Enable Data Test ID Highlighter</label>
+      <div class="switch-container">
+        <label class="switch">
+          <input type="checkbox" id="buttonVisibility" />
+          <span class="slider"></span>
+        </label>
+        <label for="buttonVisibility">Enable Data Test ID Highlighter</label>
+      </div>
+      <div class="switch-container">
+        <label class="switch">
+          <input type="checkbox" id="javaSmartCopy" />
+          <span class="slider"></span>
+        </label>
+        <label for="javaSmartCopy">Enable Java Smart Copy</label>
+      </div>
     </div>
     <script src="popup.js"></script>
   </body>
