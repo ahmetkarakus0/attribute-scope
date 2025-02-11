@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Data Test Id Finder",
+  "name": "AttributeScope",
   "version": "1.0",
-  "description": "A description of my Chrome extension",
+  "description": "Highlight and copy any attribute on web pages with ease. Perfect for developers working with dynamic elements and attributes.",
   "permissions": ["storage", "activeTab"],
   "content_scripts": [
     {
