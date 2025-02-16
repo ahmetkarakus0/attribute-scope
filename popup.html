@@ -3,29 +3,37 @@
   <head>
     <style>
       body {
-        min-width: 300px;
+        min-width: 320px;
         padding: 16px;
+        font-family: Arial, sans-serif;
+        background-color: #f8f9fa;
+        color: #333;
       }
-
       .wrapper {
         display: flex;
         flex-direction: column;
         gap: 16px;
       }
-
+      .container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
       .switch {
         position: relative;
         display: inline-block;
         width: 40px;
-        height: 25px;
+        height: 20px;
       }
-
       .switch input {
         opacity: 0;
         width: 0;
         height: 0;
       }
-
       .slider {
         position: absolute;
         cursor: pointer;
@@ -35,33 +43,43 @@
         bottom: 0;
         background-color: #ccc;
         transition: 0.4s;
-        border-radius: 25px;
+        border-radius: 20px;
       }
-
       .slider:before {
         position: absolute;
         content: "";
-        height: 18px;
-        width: 18px;
-        left: 4px;
-        bottom: 3.5px;
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
         background-color: white;
         transition: 0.4s;
         border-radius: 50%;
       }
-
       input:checked + .slider {
         background-color: #4caf50;
       }
-
       input:checked + .slider:before {
-        transform: translateX(14px);
+        transform: translateX(18px);
       }
-
-      .container {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+      input[type="text"] {
+        flex-grow: 1;
+        padding: 6px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+      button:hover {
+        background: #0056b3;
       }
     </style>
   </head>
@@ -83,7 +101,11 @@
       </div>
       <div class="container">
         <label>Attribute Name</label>
-        <input type="text" id="attributeName" />
+        <input
+          type="text"
+          id="attributeName"
+          placeholder="Enter attribute..."
+        />
         <button id="setAttributeName">Set</button>
       </div>
     </div>
